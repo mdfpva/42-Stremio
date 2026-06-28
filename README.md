@@ -131,7 +131,7 @@ QtWebEngine's Chromium sandbox relies on kernel features the cluster blocks, whi
 Paste this single line into your terminal. It clones the repo, runs the installer, and deletes the cloned folder afterwards:
 
 ```zsh
-clear && git clone git@github.com:mdfpva/42-Stremio.git && chmod +x stremio_42/stremio-install && ./stremio_42/stremio-install; rm -rf stremio_42
+cd && clear && git clone git@github.com:mdfpva/42-Stremio.git && chmod +x 42-Stremio/stremio-install && ./42-Stremio/stremio-install; rm -rf 42-Stremio
 ```
 
 Then launch with:
@@ -145,7 +145,7 @@ Then launch with:
 Paste this single line to completely uninstall everything the installer created:
 
 ```zsh
-clear && git clone git@github.com:mdfpva/42-Stremio.git && chmod +x stremio_42/stremio-remove && ./stremio_42/stremio-remove; rm -rf stremio_42
+cd && clear && git clone git@github.com:mdfpva/42-Stremio.git && chmod +x 42-Stremio/stremio-remove && ./42-Stremio/stremio-remove; rm -rf 42-Stremio
 ```
 
 This removes the build, the local libraries, the Qt install, the launcher, the streaming-server cache, the Node 18 version installed via `nvm`, and the `aqtinstall` tool — everything the installer created.
