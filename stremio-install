@@ -1,19 +1,21 @@
 #!/bin/zsh
 set -e
 
-GOINFRE_PATH="$HOME/goinfre"
-mkdir -p "$GOINFRE_PATH"
+SGOINFRE_PATH="$HOME/sgoinfre"
+mkdir -p "$SGOINFRE_PATH"
 
 echo "=== 1. Limpando resíduos antigos para libertar espaço ==="
-rm -rf "$GOINFRE_PATH/stremio-shell" "$GOINFRE_PATH/qt" "$GOINFRE_PATH/libs_locais"
-rm -f ~/stremio "$GOINFRE_PATH/stremio"
+rm -rf "$SGOINFRE_PATH/stremio-shell" "$SGOINFRE_PATH/qt" "$SGOINFRE_PATH/libs_locais"
+rm -f ~/stremio "$SGOINFRE_PATH/stremio"
 rm -rf ~/stremio-shell ~/qt ~/libs_locais
+# Limpa também uma eventual instalação antiga no goinfre
+rm -rf "$HOME/goinfre/stremio-shell" "$HOME/goinfre/qt" "$HOME/goinfre/libs_locais" "$HOME/goinfre/stremio"
 
-echo "=== 2. Criando diretório de bibliotecas no goinfre ==="
-mkdir -p "$GOINFRE_PATH/libs_locais"
+echo "=== 2. Criando diretório de bibliotecas no sgoinfre ==="
+mkdir -p "$SGOINFRE_PATH/libs_locais"
 
 echo "=== 3. Descarregando todas as dependências de vídeo e codecs ==="
-cd "$GOINFRE_PATH/libs_locais"
+cd "$SGOINFRE_PATH/libs_locais"
 
 BASE_PKGS=(
   libmpv-dev libmpv1 libluajit-5.1-2 libmujs1
@@ -64,7 +66,7 @@ NODE_BIN=$(nvm which 18)
 echo "-> Node 18: $NODE_BIN"
 
 echo "=== 5. Clonando o repositório principal ==="
-cd "$GOINFRE_PATH"
+cd "$SGOINFRE_PATH"
 env -i HOME="$HOME" PATH="$PATH" /usr/bin/git clone "https://github.com/Stremio/stremio-shell.git"
 cd stremio-shell
 
@@ -75,23 +77,23 @@ echo "=== 7. Garantindo ferramenta aqtinstall ==="
 pip install --user aqtinstall
 
 echo "=== 8. Descarregando o Qt e WebEngine ==="
-python3 -m aqt install-qt linux desktop 5.15.2 gcc_64 -m qtwebengine --outputdir "$GOINFRE_PATH/qt"
+python3 -m aqt install-qt linux desktop 5.15.2 gcc_64 -m qtwebengine --outputdir "$SGOINFRE_PATH/qt"
 
 echo "=== 9. Configurando variáveis de ambiente locais ==="
-export PATH="$GOINFRE_PATH/qt/5.15.2/gcc_64/bin:$PATH"
+export PATH="$SGOINFRE_PATH/qt/5.15.2/gcc_64/bin:$PATH"
 
-LIBS_SYSTEM_DIR=$(find "$GOINFRE_PATH/libs_locais" -name "libavfilter.so" -printf '%h\n' | head -n 1)
-LIBMPV_DIR=$(     find "$GOINFRE_PATH/libs_locais" -name "libmpv.so"      -printf '%h\n' | head -n 1)
-LUAJIT_DIR=$(     find "$GOINFRE_PATH/libs_locais" -name "libluajit*.so"  -printf '%h\n' | head -n 1)
-LIBMUJS_DIR=$(    find "$GOINFRE_PATH/libs_locais" -name "libmujs.so"     -printf '%h\n' | head -n 1)
-INCLUDE_MPV=$(    find "$GOINFRE_PATH/libs_locais" -name "mpv" -type d -path "*/include/*" | head -n 1)
+LIBS_SYSTEM_DIR=$(find "$SGOINFRE_PATH/libs_locais" -name "libavfilter.so" -printf '%h\n' | head -n 1)
+LIBMPV_DIR=$(     find "$SGOINFRE_PATH/libs_locais" -name "libmpv.so"      -printf '%h\n' | head -n 1)
+LUAJIT_DIR=$(     find "$SGOINFRE_PATH/libs_locais" -name "libluajit*.so"  -printf '%h\n' | head -n 1)
+LIBMUJS_DIR=$(    find "$SGOINFRE_PATH/libs_locais" -name "libmujs.so"     -printf '%h\n' | head -n 1)
+INCLUDE_MPV=$(    find "$SGOINFRE_PATH/libs_locais" -name "mpv" -type d -path "*/include/*" | head -n 1)
 
 echo "-> LIBMPV_DIR:  $LIBMPV_DIR"
 echo "-> INCLUDE_MPV: $INCLUDE_MPV"
 
 if [ -z "$LIBMPV_DIR" ]; then
     echo "❌ libmpv.so não encontrado. Verifica os .deb descarregados."
-    find "$GOINFRE_PATH/libs_locais" -name "libmpv*"
+    find "$SGOINFRE_PATH/libs_locais" -name "libmpv*"
     exit 1
 fi
 
@@ -105,10 +107,10 @@ echo "=== 11. Compilando o Stremio Shell ==="
 make -j$(nproc 2>/dev/null || echo 4)
 
 echo "=== 12. Descarregando o servidor de streaming ==="
-if [ -f "$GOINFRE_PATH/stremio-shell/server-url.txt" ]; then
-    SERVER_URL=$(cat "$GOINFRE_PATH/stremio-shell/server-url.txt")
-    curl -L "$SERVER_URL" -o "$GOINFRE_PATH/stremio-shell/server.js"
-    echo "-> Servidor: $(ls -lh $GOINFRE_PATH/stremio-shell/server.js)"
+if [ -f "$SGOINFRE_PATH/stremio-shell/server-url.txt" ]; then
+    SERVER_URL=$(cat "$SGOINFRE_PATH/stremio-shell/server-url.txt")
+    curl -L "$SERVER_URL" -o "$SGOINFRE_PATH/stremio-shell/server.js"
+    echo "-> Servidor: $(ls -lh $SGOINFRE_PATH/stremio-shell/server.js)"
 else
     echo "⚠️  server-url.txt não encontrado."
 fi
@@ -116,32 +118,32 @@ fi
 echo "=== 13. Criando wrapper 'node' que o shell invoca (applicationDirPath/node) ==="
 # O main.qml lança applicationDirPath + "/node" server.js — este wrapper
 # injeta LD_LIBRARY_PATH + FFMPEG_PATH e delega no node 18 real.
-cat << NEOF > "$GOINFRE_PATH/stremio-shell/node"
+cat << NEOF > "$SGOINFRE_PATH/stremio-shell/node"
 #!/bin/sh
-GOINFRE_LIBS="\$HOME/goinfre/libs_locais"
-ALL_LIB_DIRS=\$(find "\$GOINFRE_LIBS" -name "*.so*" -printf '%h\n' 2>/dev/null | sort -u | tr '\n' ':' | sed 's/:\$//')
+SGOINFRE_LIBS="\$HOME/sgoinfre/libs_locais"
+ALL_LIB_DIRS=\$(find "\$SGOINFRE_LIBS" -name "*.so*" -printf '%h\n' 2>/dev/null | sort -u | tr '\n' ':' | sed 's/:\$//')
 export LD_LIBRARY_PATH="\$ALL_LIB_DIRS:\$LD_LIBRARY_PATH"
-export FFMPEG_PATH="\$GOINFRE_LIBS/usr/bin/ffmpeg"
-export FFPROBE_PATH="\$GOINFRE_LIBS/usr/bin/ffprobe"
-export PATH="\$GOINFRE_LIBS/usr/bin:\$PATH"
+export FFMPEG_PATH="\$SGOINFRE_LIBS/usr/bin/ffmpeg"
+export FFPROBE_PATH="\$SGOINFRE_LIBS/usr/bin/ffprobe"
+export PATH="\$SGOINFRE_LIBS/usr/bin:\$PATH"
 exec $NODE_BIN "\$@"
 NEOF
-chmod +x "$GOINFRE_PATH/stremio-shell/node"
+chmod +x "$SGOINFRE_PATH/stremio-shell/node"
 
 echo "=== CONFIGURAÇÃO CONCLUÍDA ==="
-if [ -f "$GOINFRE_PATH/stremio-shell/stremio" ]; then
-    cat << L_EOF > "$GOINFRE_PATH/stremio"
+if [ -f "$SGOINFRE_PATH/stremio-shell/stremio" ]; then
+    cat << L_EOF > "$SGOINFRE_PATH/stremio"
 #!/bin/zsh
-ALL_LIB_DIRS=\$(find "$GOINFRE_PATH/libs_locais" -name "*.so*" -printf '%h\n' 2>/dev/null | sort -u | tr '\n' ':' | sed 's/:\$//')
+ALL_LIB_DIRS=\$(find "$SGOINFRE_PATH/libs_locais" -name "*.so*" -printf '%h\n' 2>/dev/null | sort -u | tr '\n' ':' | sed 's/:\$//')
 export LD_LIBRARY_PATH="\$ALL_LIB_DIRS:\$LD_LIBRARY_PATH"
 export QTWEBENGINE_CHROMIUM_FLAGS="--no-sandbox --disable-dev-shm-usage --disable-gpu-sandbox"
 export QTWEBENGINE_DISABLE_SANDBOX=1
-exec "$GOINFRE_PATH/stremio-shell/stremio" --no-sandbox "\$@"
+exec "$SGOINFRE_PATH/stremio-shell/stremio" --no-sandbox "\$@"
 L_EOF
-    chmod +x "$GOINFRE_PATH/stremio"
-    ln -sf "$GOINFRE_PATH/stremio" ~/stremio
+    chmod +x "$SGOINFRE_PATH/stremio"
+    ln -sf "$SGOINFRE_PATH/stremio" ~/stremio
     echo "✅ Sucesso! Para iniciar: ~/stremio"
 else
     echo "❌ Erro: executável não gerado."
-    ldd "$GOINFRE_PATH/stremio-shell/stremio" 2>/dev/null | grep "not found" || true
+    ldd "$SGOINFRE_PATH/stremio-shell/stremio" 2>/dev/null | grep "not found" || true
 fi
